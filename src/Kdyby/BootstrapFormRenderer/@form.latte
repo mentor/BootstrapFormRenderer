@@ -9,8 +9,7 @@
 {define #form}
 {form $form}
 {block #errors}
-
-<div n:foreach="$renderer->findErrors() as $error" class="alert alert-error">
+<div n:if="!$renderer->errorsAtInputs" n:foreach="$renderer->findErrors() as $error" class="alert alert-error">
     <a class="close" data-dismiss="alert">×</a>{$error}
 </div>
 {/block}
@@ -30,12 +29,12 @@
             {block #controls}
             {foreach $controls as $control}
             {if $renderer->isSubmitButton($control)}
-                {if $iterator->first}{='<div class="form-actions">'|noescape}{/if}
+                {if $iterator->first}{='<div class="form-group"><div class="form-actions">'|noescape}{/if}
                 {input $renderer->getControlName($control)}
-                {if !$renderer->isSubmitButton($iterator->nextValue)}{="</div>"|noescape}{/if}
+                {if !$renderer->isSubmitButton($iterator->nextValue)}{="</div></div>"|noescape}{/if}
                 {?continue}
             {/if}
-			{var $attrs = ['input' => [], 'label' => []]}
+			{var $attrs = ['input' => ['class'=>'form-control'], 'label' => []]}
 
             {block #control}
             <div{$control->getOption('pairContainer')->attributes()|noescape} n:tag-if="$control->getOption('pairContainer')">
@@ -46,7 +45,7 @@
                 }
 
                 {if $controlTemplate = $renderer->getControlTemplate($control)}
-                    {include "$controlTemplate", name => $name, description => $description, error => $error, form => $form, _form => $form, __form => $form, attrs => $attrs}
+                    {include "$controlTemplate", name => $name, description => (!$control->hasErrors() ? $description : null), error => $error, form => $form, _form => $form, __form => $form, attrs => $attrs}
 
                 {elseif $renderer->isSubmitButton($control)}
 
@@ -55,55 +54,62 @@
                 {elseif $renderer->isButton($control)}
 
                     <div class="controls">
-						{$renderer::mergeAttrs($form[$name]->getControl(), $attrs['input'])}{$error}{$description}
+						{$renderer::mergeAttrs($form[$name]->getControl(), $attrs['input'])}{$error}{(!$control->hasErrors() ? $description)}
                     </div>
 
                 {elseif $renderer->isCheckbox($control)}
 
 					{var $label = $renderer::mergeAttrs($form[$name]->getLabel(), $attrs['label'])}
-                    <div class="controls" n:tag-if="!$renderer->controlHasClass($control, 'inline')">
-                        {$label->startTag()|noescape}{$renderer::mergeAttrs($form[$name]->getControl(), $attrs['input'])}{$renderer->getLabelBody($control)}{$label->endTag()|noescape}{$error}{$description}
+                    <div class="checkbox" n:tag-if="!$renderer->controlHasClass($control, 'inline')">
+                        {$label->startTag()|noescape}{$renderer::mergeAttrs($form[$name]->getControl(), $attrs['input'])}{$renderer->getLabelBody($control)}{$label->endTag()|noescape}
+                        {$error}{(!$control->hasErrors() ? $description)}
                     </div>
 
                 {elseif $renderer->isRadioList($control)}
 
-                    {$renderer::mergeAttrs($form[$name]->getLabel()->addClass("control-label"), $attrs['label'])}
-
                     <div class="controls">
+                    	{$renderer::mergeAttrs($form[$name]->getLabel()->addClass("control-label"), $attrs['label'])}
+
                         {foreach $renderer->getRadioListItems($control) as $item}
 
                             {$renderer::mergeAttrs($item->html, $attrs['input'])}
-                        {/foreach}{$error}{$description}
+                            <span n:tag-if="$control->hasErrors() && $renderer->feedbackErrors" class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true"></span>
+
+                        {/foreach}{$error}{(!$control->hasErrors() ? $description)}
                     </div>
 
                 {elseif $renderer->isCheckboxList($control)}
 
-                    {$renderer::mergeAttrs($form[$name]->getLabel()->addClass("control-label"), $attrs['label'])}
-
                     <div class="controls">
-                        {foreach $renderer->getCheckboxListItems($control) as $item}
+                    	{$renderer::mergeAttrs($form[$name]->getLabel()->addClass("control-label"), $attrs['label'])}
 
+                        {foreach $renderer->getCheckboxListItems($control) as $item}
                             {$renderer::mergeAttrs($item->html, $attrs['input'])}
-                        {/foreach}{$error}{$description}
+                            <span n:tag-if="$control->hasErrors() && $renderer->feedbackErrors" class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true"></span>
+                        {/foreach}{$error}{(!$control->hasErrors() ? $description)}
                     </div>
 
                 {else}
 
-                    {$renderer::mergeAttrs($form[$name]->getLabel(), $attrs['label'])}
+                    <div n:class="controls">
+                    	<div n:class="inputs">
+                    		{$renderer::mergeAttrs($form[$name]->getLabel(), $attrs['label'])}
 
-                    <div class="controls">
-                        {var $prepend = $control->getOption('input-prepend'), $append = $control->getOption('input-append')}
-                        <div n:class="$prepend? input-prepend, $append? input-append" n:tag-if="$prepend || $append">
-                            {$prepend}{$renderer::mergeAttrs($form[$name]->getControl(), $attrs['input'])}{$append}
+							{var $prepend = $control->getOption('input-prepend'), $append = $control->getOption('input-append')}
+							<div n:class="$prepend? input-prepend, $append? input-append, input-group" n:tag-if="$prepend || $append">
+								{$prepend}{$renderer::mergeAttrs($form[$name]->getControl(), $attrs['input'])}{$append}
+								<span n:tag-if="$control->hasErrors() && $renderer->feedbackErrors" class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true"></span>
+							</div>
+
                         </div>
-                        {$error}{$description}
+                        {$error}{(!$control->hasErrors() ? $description)}
                     </div>
 
                 {/if}
             </div>
             {/block}
 
-            {if $renderer->isSubmitButton($iterator->nextValue)}{='<div class="form-actions">'|noescape}{/if}
+            {if $renderer->isSubmitButton($iterator->nextValue)}{='<div class="form-group"><div class="form-actions">'|noescape}{/if}
             {/foreach}
             {/block}
 

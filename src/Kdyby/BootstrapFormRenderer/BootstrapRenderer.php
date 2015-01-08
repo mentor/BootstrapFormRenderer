@@ -22,7 +22,6 @@ if (!class_exists('Nette\Bridges\FormsLatte\FormMacros')) {
 	class_alias('Nette\Latte\Macros\FormMacros', 'Nette\Bridges\FormsLatte\FormMacros');
 }
 
-
 /**
  * Created with twitter bootstrap in mind.
  *
@@ -47,6 +46,14 @@ class BootstrapRenderer extends Nette\Object implements Nette\Forms\IFormRendere
 	 * @var bool
 	 */
 	public $errorsAtInputs = TRUE;
+
+	public $feedbackErrors = FALSE;
+
+	public $visualLabels = TRUE;
+
+	public $visualErrors = TRUE;
+
+	public $visualDescriptions = TRUE;
 
 	/**
 	 * Groups that should be rendered first
@@ -109,10 +116,10 @@ class BootstrapRenderer extends Nette\Object implements Nette\Forms\IFormRendere
 				$this->prepareControl($control);
 			}
 
-			$formEl = $form->getElementPrototype();
+			/*$formEl = $form->getElementPrototype();
 			if (!($classes = self::getClasses($formEl)) || stripos($classes, 'form-') === FALSE) {
 				$formEl->addClass('form-horizontal');
-			}
+			}*/
 
 		} elseif ($mode === 'begin') {
 			foreach ($this->form->getControls() as $control) {
@@ -193,30 +200,37 @@ class BootstrapRenderer extends Nette\Object implements Nette\Forms\IFormRendere
 		} else {
 			$label = $control->labelPrototype;
 			if ($control instanceof Controls\Checkbox) {
-				$label->addClass('checkbox');
+				$label->addClass('control-label');
 
 			} elseif (!$control instanceof Controls\RadioList && !self::isCheckboxList($control)) {
 				$label->addClass('control-label');
+                if (!$this->visualLabels) {
+                    $label->addClass('sr-only');
+                }
 			}
+
 
 			$control->setOption('pairContainer', $pair = Html::el('div'));
 			$pair->id = $control->htmlId . '-pair';
-			$pair->addClass('control-group');
+			$pair->addClass('form-group');
 			if ($control->getOption('required', FALSE)) {
 				$pair->addClass('required');
 			}
 			if ($control->errors) {
-				$pair->addClass('error');
+				$pair->addClass('has-error');
+                if ($this->feedbackErrors) {
+                    $pair->addClass('has-feedback');
+                }
 			}
 
 			if ($prepend = $control->getOption('input-prepend')) {
-				$prepend = Html::el('span', array('class' => 'add-on'))
+				$prepend = Html::el('span', array('class' => 'input-group-addon'))
 					->{$prepend instanceof Html ? 'add' : 'setText'}($prepend);
 				$control->setOption('input-prepend', $prepend);
 			}
 
 			if ($append = $control->getOption('input-append')) {
-				$append = Html::el('span', array('class' => 'add-on'))
+				$append = Html::el('span', array('class' => 'input-group-addon'))
 					->{$append instanceof Html ? 'add' : 'setText'}($append);
 				$control->setOption('input-append', $append);
 			}
@@ -374,9 +388,9 @@ class BootstrapRenderer extends Nette\Object implements Nette\Forms\IFormRendere
 	 * @param \Nette\Forms\Controls\BaseControl $control
 	 * @return \Nette\Utils\Html
 	 */
-	public static function getControlDescription(Controls\BaseControl $control)
+	public function getControlDescription(Controls\BaseControl $control)
 	{
-		if (!$desc = $control->getOption('description')) {
+		if ((!$desc = $control->getOption('description')) || !$this->visualDescriptions ) {
 			return Html::el();
 		}
 
@@ -399,7 +413,7 @@ class BootstrapRenderer extends Nette\Object implements Nette\Forms\IFormRendere
 	 */
 	public function getControlError(Controls\BaseControl $control)
 	{
-		if (!($errors = $control->getErrors()) || !$this->errorsAtInputs) {
+		if (!($errors = $control->getErrors()) || !$this->errorsAtInputs || !$this->visualErrors) {
 			return Html::el();
 		}
 		$error = reset($errors);
@@ -410,8 +424,8 @@ class BootstrapRenderer extends Nette\Object implements Nette\Forms\IFormRendere
 		}
 
 		// create element
-		return Html::el('p', array('class' => 'help-inline'))
-			->{$error instanceof Html ? 'add' : 'setText'}($error);
+		return Html::el('p', array('class' => 'help-block'))->{$error instanceof Html ? 'add' : 'setText'}($error);
+
 	}
 
 
